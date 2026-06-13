@@ -82,7 +82,7 @@ for row in range(rows):  # row=0表示第一排
         if height_key == "c2" and row > 8:
             base_score -= 3
         if height_key == "c3" and row <= 2:
-            base_score -= 1  # 太高坐前排反而仰角大
+            base_score -= 1
         
         # 边缘座位惩罚
         if col < 2 or col > cols - 3:
@@ -102,25 +102,28 @@ with col1:
     df_display.index = [f"第{i+1}排" for i in range(rows)]
     df_display.columns = [f"第{j+1}列" for j in range(cols)]
     
-    # 使用map代替applymap（修复弃用警告）
+    # 深色系、低饱和度、不刺眼的颜色
     def color_score(val):
         if val >= 7:
-            return 'background-color: #90EE90'  # 浅绿
+            # 深墨绿色（推荐）
+            return 'background-color: #2D5A3F; color: #E0E0E0'
         elif val >= 4:
-            return 'background-color: #FFD700'  # 金色
+            # 深橄榄绿/土黄色（一般）
+            return 'background-color: #5C4B2A; color: #E0E0E0'
         else:
-            return 'background-color: #FFB6C1'  # 浅红
+            # 深红棕色（不推荐）
+            return 'background-color: #6B2E2E; color: #E0E0E0'
     
-    # 应用样式 - 使用map而不是applymap
+    # 应用样式
     styled_df = df_display.style.map(color_score).format("{:.1f}")
     st.dataframe(styled_df, height=450, use_container_width=True)
     
-    # 图例
+    # 图例（深色系）
     st.markdown("""
     <div style="display: flex; gap: 20px; margin-top: 10px;">
-        <div><span style="background-color: #90EE90; padding: 2px 10px;">🟢 7-10分</span> 强烈推荐</div>
-        <div><span style="background-color: #FFD700; padding: 2px 10px;">🟡 4-6分</span> 一般</div>
-        <div><span style="background-color: #FFB6C1; padding: 2px 10px;">🔴 0-3分</span> 不推荐</div>
+        <div><span style="background-color: #2D5A3F; padding: 2px 10px; color: #E0E0E0;">🟢 7-10分</span> 强烈推荐</div>
+        <div><span style="background-color: #5C4B2A; padding: 2px 10px; color: #E0E0E0;">🟡 4-6分</span> 一般</div>
+        <div><span style="background-color: #6B2E2E; padding: 2px 10px; color: #E0E0E0;">🔴 0-3分</span> 不推荐</div>
     </div>
     """, unsafe_allow_html=True)
 
