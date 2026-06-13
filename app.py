@@ -97,12 +97,12 @@ with col1:
     st.subheader("📊 座位推荐热力图")
     st.markdown("颜色越🟢**绿**越推荐，越🔴**红**越不推荐")
     
-    # 创建带颜色的DataFrame显示
+    # 创建DataFrame显示
     df_display = pd.DataFrame(score_matrix.round(1))
     df_display.index = [f"第{i+1}排" for i in range(rows)]
     df_display.columns = [f"第{j+1}列" for j in range(cols)]
     
-    # 自定义颜色映射函数
+    # 使用map代替applymap（修复弃用警告）
     def color_score(val):
         if val >= 7:
             return 'background-color: #90EE90'  # 浅绿
@@ -111,8 +111,8 @@ with col1:
         else:
             return 'background-color: #FFB6C1'  # 浅红
     
-    # 应用样式
-    styled_df = df_display.style.applymap(color_score).format("{:.1f}")
+    # 应用样式 - 使用map而不是applymap
+    styled_df = df_display.style.map(color_score).format("{:.1f}")
     st.dataframe(styled_df, height=450, use_container_width=True)
     
     # 图例
