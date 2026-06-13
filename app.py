@@ -32,13 +32,7 @@ preference = st.sidebar.selectbox(
      "互动优先 - 靠近老师便于交流"]
 )
 
-# 视力情况
-vision = st.sidebar.selectbox(
-    "视力情况",
-    ["正常视力", "轻度近视（戴眼镜）", "高度近视"]
-)
-
-# 教室选择（后续可扩展）
+# 教室选择
 classroom = st.sidebar.selectbox(
     "阶梯教室",
     ["B21（二校区）", "其他教室（即将上线）"]
@@ -46,13 +40,6 @@ classroom = st.sidebar.selectbox(
 
 st.sidebar.markdown("---")
 st.sidebar.caption("基于视角模型 tanα 最大化 + 仰角 ≤30° 约束")
-
-# 主界面两列布局
-col1, col2 = st.columns([2, 1])
-
-with col1:
-    st.subheader("📊 座位推荐热力图")
-    st.markdown("颜色越🟢**绿**越推荐，越🔴**红**越不推荐")
 
 # 身高映射
 if "较矮" in height_option:
@@ -78,7 +65,7 @@ for row in range(rows):  # row=0表示第一排
         center_offset = 1 - abs(col - cols/2) / (cols/2)
         
         # 前排/后排基础分
-        if preference == "互动优先 - 靠近老师便于交流":
+        if "互动" in preference:
             # 互动偏好：前排分数高
             base_score = (rows - row) * 0.3 + center_offset * 5
             if row <= 3:  # 前3排加分
@@ -97,34 +84,45 @@ for row in range(rows):  # row=0表示第一排
         if height_key == "c3" and row <= 2:
             base_score -= 1  # 太高坐前排反而仰角大
         
-        # 视力影响
-        if vision == "高度近视" and row > 7:
-            base_score -= 4
-        elif vision == "轻度近视（戴眼镜）" and row > 9:
-            base_score -= 2
-        
         # 边缘座位惩罚
         if col < 2 or col > cols - 3:
             base_score -= 2
         
         score_matrix[row][col] = max(0, min(10, base_score))
 
-# 显示热力图
-df_display = pd.DataFrame(score_matrix.round(1))
-df_display.index = [f"第{i+1}排" for i in range(rows)]
-df_display.columns = [f"列{j+1}" for j in range(cols)]
+# 主界面两列布局
+col1, col2 = st.columns([2, 1])
 
 with col1:
-    # 使用渐变色热力图
-    styled_df = df_display.style.background_gradient(
-        cmap="RdYlGn",  # 红黄绿配色
-        axis=None,
-        vmin=0,
-        vmax=10
-    ).format("{:.1f}")
+    st.subheader("📊 座位推荐热力图")
+    st.markdown("颜色越🟢**绿**越推荐，越🔴**红**越不推荐")
+    
+    # 创建带颜色的DataFrame显示
+    df_display = pd.DataFrame(score_matrix.round(1))
+    df_display.index = [f"第{i+1}排" for i in range(rows)]
+    df_display.columns = [f"第{j+1}列" for j in range(cols)]
+    
+    # 自定义颜色映射函数
+    def color_score(val):
+        if val >= 7:
+            return 'background-color: #90EE90'  # 浅绿
+        elif val >= 4:
+            return 'background-color: #FFD700'  # 金色
+        else:
+            return 'background-color: #FFB6C1'  # 浅红
+    
+    # 应用样式
+    styled_df = df_display.style.applymap(color_score).format("{:.1f}")
     st.dataframe(styled_df, height=450, use_container_width=True)
     
-    st.caption("🔴 0-3分 | 🟡 4-6分 | 🟢 7-10分")
+    # 图例
+    st.markdown("""
+    <div style="display: flex; gap: 20px; margin-top: 10px;">
+        <div><span style="background-color: #90EE90; padding: 2px 10px;">🟢 7-10分</span> 强烈推荐</div>
+        <div><span style="background-color: #FFD700; padding: 2px 10px;">🟡 4-6分</span> 一般</div>
+        <div><span style="background-color: #FFB6C1; padding: 2px 10px;">🔴 0-3分</span> 不推荐</div>
+    </div>
+    """, unsafe_allow_html=True)
 
 # 推荐建议
 with col2:
@@ -134,11 +132,9 @@ with col2:
     best_score = np.max(score_matrix)
     best_positions = np.argwhere(score_matrix == best_score)
     best_rows = [p[0] + 1 for p in best_positions]
-    best_cols = [p[1] + 1 for p in best_positions]
     
     st.markdown(f"**你的身高：** {height_option.split('(')[0]}")
     st.markdown(f"**上课偏好：** {'互动优先' if '互动' in preference else '视角优先'}")
-    st.markdown(f"**视力情况：** {vision}")
     st.markdown("---")
     
     if "互动" in preference:
@@ -150,11 +146,9 @@ with col2:
     
     if height_key == "c2":
         st.warning("⚠️ 建议避免第10排以后，视线可能被遮挡")
-    if vision == "高度近视":
-        st.warning("⚠️ 建议优先选择第1-5排")
     
     st.markdown("---")
-    st.caption(f"📐 基于B21阶梯教室实测数据 | 最佳视角区域tanα = {best_score:.1f}/10")
+    st.caption(f"📐 基于B21阶梯教室实测数据")
 
 # 教室参数展示
 st.markdown("---")
@@ -176,3 +170,14 @@ with param_col4:
 
 st.markdown("---")
 st.caption("🔬 数学模型：tanα = (tanβ - tanγ)/(1+tanβ·tanγ) | 约束：tanβ ≤ tan30°")
+
+# 显示公式
+with st.expander("📖 查看数学模型详情"):
+    st.latex(r"\tan\alpha = \frac{\tan\beta - \tan\gamma}{1 + \tan\beta\tan\gamma}")
+    st.latex(r"\tan\beta = \frac{b - c - (k-1)d\tan\theta + h}{x}")
+    st.latex(r"\tan\gamma = \frac{b - c - (k-1)d\tan\theta}{x}")
+    st.markdown("**参数说明：**")
+    st.markdown("- α：视角（观察者眼睛到黑板上沿和下沿的夹角）")
+    st.markdown("- β：仰角（观察者眼睛到黑板上沿与水平线的夹角）")
+    st.markdown("- γ：俯角（观察者眼睛到黑板下沿与水平线的夹角）")
+    st.markdown("- b：黑板离地高 | c：坐姿眼高 | h：黑板高 | d：排距 | θ：地板倾角 | x：水平距离")
